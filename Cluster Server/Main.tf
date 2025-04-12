@@ -251,17 +251,17 @@ resource "aws_security_group" "CorporateProject_rds_sg" {
 }
 
 # RDS MySQL instance
-resource "aws_db_instance" "CorporateProject_mysql" {
+resource "aws_db_instance" "corporateproject_mysql" {
   identifier             = "corporateproject-mysql"
   engine                 = "mysql"
   engine_version         = "8.0"
-  instance_class         = "db.t2.medium"
+  instance_class         = "db.t3.medium"
   allocated_storage      = 20
   storage_type           = "gp2"
-  name                   = "corporateprojectdb"
+  db_name                = "CorporateProject_db"
   username               = "admin"
   password               = "StrongPassword123!" # Replace with a secure password
-  db_subnet_group_name   = aws_db_subnet_group.CorporateProject_db_subnet_group.db_name
+  db_subnet_group_name   = aws_db_subnet_group.CorporateProject_db_subnet_group.name
   vpc_security_group_ids = [aws_security_group.CorporateProject_rds_sg.id]
   publicly_accessible    = false
   skip_final_snapshot    = true
