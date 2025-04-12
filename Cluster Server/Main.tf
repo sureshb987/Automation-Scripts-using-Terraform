@@ -261,7 +261,7 @@ resource "aws_db_instance" "CorporateProject_mysql" {
   name                   = "corporateprojectdb"
   username               = "admin"
   password               = "StrongPassword123!" # Replace with a secure password
-  db_subnet_group_name   = aws_db_subnet_group.CorporateProject_db_subnet_group.name
+  db_subnet_group_name   = aws_db_subnet_group.CorporateProject_db_subnet_group.db_name
   vpc_security_group_ids = [aws_security_group.CorporateProject_rds_sg.id]
   publicly_accessible    = false
   skip_final_snapshot    = true
