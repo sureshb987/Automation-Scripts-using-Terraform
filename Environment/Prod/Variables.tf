@@ -11,6 +11,6 @@ variable "db_password" {
 }
 
 variable "environment" {
-  description = "staging environment"
+  description = "Production environment"
   type        = string
 }
