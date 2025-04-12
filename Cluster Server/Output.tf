@@ -25,5 +25,5 @@ output "rds_username" {
 
 output "rds_db_name" {
   description = "RDS database name"
-  value       = aws_db_instance.CorporateProject_mysql.name
+  value       = aws_db_instance.CorporateProject_mysql.db_name
 }
