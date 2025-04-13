@@ -1,12 +1,12 @@
 module "CorporateProject_vpc" {
-  source        = "../../Cluster Server"
+  source        = "./modules/Vpc"
   vpc_cidr      = "10.0.0.0/16"
   public_subnets = ["10.0.1.0/24", "10.0.2.0/24"]
   azs           = ["ap-south-1a", "ap-south-1b"]
   environment   = var.environment
 }
 module "CorporateProject_eks" {
-  source        = "../../Cluster Server"
+  source        = "./modules/eks"
   cluster_name  = "${var.environment}-eks"
   k8s_version   = "1.27"
   subnets       = module.CorporateProject_vpc.public_subnets
@@ -14,7 +14,7 @@ module "CorporateProject_eks" {
   key_name      = var.key_name
 }
 module "CorporateProject_rds" {
-  source        = "../../Cluster Server"
+  source        = "./modules/Rds"
   environment   = var.environment
   db_name       = "${var.environment}db"
   db_user       = "${var.environment}user"
