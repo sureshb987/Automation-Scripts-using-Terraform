@@ -58,8 +58,27 @@ resource "aws_instance" "my-ec2" {
     Name = "Cluster_Server"
   }
 }
-resource "aws_security_group" "CorporateProject_cluster_sg" {
-  vpc_id = aws_vpc.CorporateProject_vpc.id
+### eks-main.tf
+resource "aws_iam_role" "eks_cluster_role" {
+  name = "CorporateProject-cluster-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = { Service = "eks.amazonaws.com" }
+      Action = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
+  role       = aws_iam_role.eks_cluster_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+}
+
+resource "aws_security_group" "eks_cluster_sg" {
+  vpc_id = var.vpc_id
 
   egress {
     from_port   = 0
@@ -73,8 +92,8 @@ resource "aws_security_group" "CorporateProject_cluster_sg" {
   }
 }
 
-resource "aws_security_group" "CorporateProject_node_sg" {
-  vpc_id = aws_vpc.CorporateProject_vpc.id
+resource "aws_security_group" "eks_node_sg" {
+  vpc_id = var.vpc_id
 
   ingress {
     from_port   = 0
@@ -95,21 +114,40 @@ resource "aws_security_group" "CorporateProject_node_sg" {
   }
 }
 
-resource "aws_eks_cluster" "CorporateProject" {
+resource "aws_eks_cluster" "eks_cluster" {
   name     = "CorporateProject-cluster"
-  role_arn = aws_iam_role.CorporateProject_cluster_role.arn
+  role_arn = aws_iam_role.eks_cluster_role.arn
 
   vpc_config {
-    subnet_ids         = aws_subnet.CorporateProject_subnet[*].id
-    security_group_ids = [aws_security_group.CorporateProject_cluster_sg.id]
+    subnet_ids         = var.subnet_ids
+    security_group_ids = [aws_security_group.eks_cluster_sg.id]
   }
 }
 
-resource "aws_eks_node_group" "CorporateProject" {
-  cluster_name    = aws_eks_cluster.CorporateProject.name
+resource "aws_iam_role" "eks_node_role" {
+  name = "CorporateProject-node-group-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = { Service = "ec2.amazonaws.com" }
+      Action = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "eks_node_policies" {
+  count      = length(var.node_policy_arns)
+  role       = aws_iam_role.eks_node_role.name
+  policy_arn = var.node_policy_arns[count.index]
+}
+
+resource "aws_eks_node_group" "eks_nodes" {
+  cluster_name    = aws_eks_cluster.eks_cluster.name
   node_group_name = "CorporateProject-node-group"
-  node_role_arn   = aws_iam_role.CorporateProject_node_group_role.arn
-  subnet_ids      = aws_subnet.CorporateProject_subnet[*].id
+  node_role_arn   = aws_iam_role.eks_node_role.arn
+  subnet_ids      = var.subnet_ids
 
   scaling_config {
     desired_size = 3
@@ -121,63 +159,6 @@ resource "aws_eks_node_group" "CorporateProject" {
 
   remote_access {
     ec2_ssh_key = var.ssh_key_name
-    source_security_group_ids = [aws_security_group.CorporateProject_node_sg.id]
+    source_security_group_ids = [aws_security_group.eks_node_sg.id]
   }
-}
-
-resource "aws_iam_role" "CorporateProject_cluster_role" {
-  name = "CorporateProject-cluster-role"
-
-  assume_role_policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "Service": "eks.amazonaws.com"
-      },
-      "Action": "sts:AssumeRole"
-    }
-  ]
-}
-EOF
-}
-
-resource "aws_iam_role_policy_attachment" "CorporateProject_cluster_role_policy" {
-  role       = aws_iam_role.CorporateProject_cluster_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
-}
-
-resource "aws_iam_role" "CorporateProject_node_group_role" {
-  name = "CorporateProject-node-group-role"
-
-  assume_role_policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "Service": "ec2.amazonaws.com"
-      },
-      "Action": "sts:AssumeRole"
-    }
-  ]
-}
-EOF
-}
-resource "aws_iam_role_policy_attachment" "CorporateProject_node_group_role_policy" {
-  role       = aws_iam_role.CorporateProject_node_group_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
-}
-
-resource "aws_iam_role_policy_attachment" "CorporateProject_node_group_cni_policy" {
-  role       = aws_iam_role.CorporateProject_node_group_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
-}
-
-resource "aws_iam_role_policy_attachment" "CorporateProject_node_group_registry_policy" {
-  role       = aws_iam_role.CorporateProject_node_group_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
